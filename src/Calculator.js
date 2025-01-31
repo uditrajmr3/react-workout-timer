@@ -1,28 +1,85 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useEffect, useReducer, useState } from "react";
 import clickSound from "./ClickSound.m4a";
 
-function Calculator({ workouts, allowSound }) {
-  const [number, setNumber] = useState(workouts.at(0).numExercises);
-  const [sets, setSets] = useState(3);
-  const [speed, setSpeed] = useState(90);
-  const [durationBreak, setDurationBreak] = useState(5);
+function reducer(state, action) {
+  switch (action.type) {
+    case "number":
+      return { ...state, number: action.payload };
+    case "sets":
+      return { ...state, sets: action.payload };
+    case "speed":
+      return { ...state, speed: action.payload };
+    case "durationBreak":
+      return { ...state, durationBreak: action.payload };
+    default:
+      throw new Error("Unknown action type: " + action.type);
+  }
+}
 
-  const duration = (number * sets * speed) / 60 + (sets - 1) * durationBreak;
+function Calculator({ workouts, allowSound }) {
+  const initialState = {
+    number: workouts.at(0).numExercises,
+    sets: 3,
+    speed: 90,
+    durationBreak: 5,
+  };
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { number, sets, speed, durationBreak } = state;
+  // const duration = (number * sets * speed) / 60 + (sets - 1) * durationBreak;
+  const [duration, setDuration] = useState(0);
   const mins = Math.floor(duration);
   const seconds = (duration - mins) * 60;
 
-  const playSound = function () {
-    if (!allowSound) return;
-    const sound = new Audio(clickSound);
-    sound.play();
-  };
+  useEffect(() => {
+    setDuration((number * sets * speed) / 60 + (sets - 1) * durationBreak);
+    return () => {};
+  }, [durationBreak, number, sets, speed]);
+
+  useEffect(
+    function () {
+      function playSound() {
+        if (!allowSound) return;
+        const sound = new Audio(clickSound);
+        sound.play();
+      }
+      playSound();
+    },
+    [allowSound, duration]
+  );
+
+  function handleIncDuration() {
+    setDuration((duration) => Math.floor(duration) + 1);
+  }
+  function handleDecDuration() {
+    setDuration((duration) => {
+      if (duration <= 0) return 0;
+      return Math.floor(duration) - 1;
+    });
+  }
+
+  function handleNumberOfWorkouts(e) {
+    e.preventDefault();
+    dispatch({ type: "number", payload: e.target.value });
+  }
+  function handleSets(e) {
+    e.preventDefault();
+    dispatch({ type: "sets", payload: e.target.value });
+  }
+  function handleSpeed(e) {
+    e.preventDefault();
+    dispatch({ type: "speed", payload: e.target.value });
+  }
+  function handleDurationBreak(e) {
+    e.preventDefault();
+    dispatch({ type: "durationBreak", payload: e.target.value });
+  }
 
   return (
     <>
       <form>
         <div>
           <label>Type of workout</label>
-          <select value={number} onChange={(e) => setNumber(+e.target.value)}>
+          <select value={number} onChange={handleNumberOfWorkouts}>
             {workouts.map((workout) => (
               <option value={workout.numExercises} key={workout.name}>
                 {workout.name} ({workout.numExercises} exercises)
@@ -37,7 +94,7 @@ function Calculator({ workouts, allowSound }) {
             min="1"
             max="5"
             value={sets}
-            onChange={(e) => setSets(e.target.value)}
+            onChange={handleSets}
           />
           <span>{sets}</span>
         </div>
@@ -49,7 +106,7 @@ function Calculator({ workouts, allowSound }) {
             max="180"
             step="30"
             value={speed}
-            onChange={(e) => setSpeed(e.target.value)}
+            onChange={handleSpeed}
           />
           <span>{speed} sec/exercise</span>
         </div>
@@ -60,19 +117,19 @@ function Calculator({ workouts, allowSound }) {
             min="1"
             max="10"
             value={durationBreak}
-            onChange={(e) => setDurationBreak(e.target.value)}
+            onChange={handleDurationBreak}
           />
           <span>{durationBreak} minutes/break</span>
         </div>
       </form>
       <section>
-        <button onClick={() => {}}>–</button>
+        <button onClick={handleDecDuration}>–</button>
         <p>
           {mins < 10 && "0"}
           {mins}:{seconds < 10 && "0"}
           {seconds}
         </p>
-        <button onClick={() => {}}>+</button>
+        <button onClick={handleIncDuration}>+</button>
       </section>
     </>
   );
