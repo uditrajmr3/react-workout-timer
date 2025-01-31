@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useReducer, useState } from "react";
+import { memo, useEffect, useReducer, useState } from "react";
 import clickSound from "./ClickSound.m4a";
 
 function reducer(state, action) {
